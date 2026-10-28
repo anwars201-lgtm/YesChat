@@ -1,0 +1,49 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "seed": "tsx src/lib/seed.ts",
+    "db:seed:generate": "tsx scripts/generate-seed.ts",
+    "db:seed:demo": "tsx prisma/seed.demo.ts",
+    "test": "NODE_OPTIONS=--require=express-async-errors vitest run",
+    "test:watch": "vitest",
+    "prepare": "node -e \"try{require('fs').chmodSync('../.husky/pre-commit',0o755)}catch(e){}\""
+  },
+  "dependencies": {
+    "@prisma/client": "^5.0.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.0",
+    "express": "^4.18.0",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.3.0",
+    "jsonwebtoken": "^9.0.0",
+    "multer": "^2.1.1",
+    "pino": "^9.5.0",
+    "pino-http": "^10.4.0",
+    "prisma": "^5.0.0",
+    "qs": "^6.13.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@prisma/generator-helper": "^5.0.0",
+    "@prisma/internals": "^5.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^20.10.0",
+    "@types/qs": "^6.9.15",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.4",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vitest": "^4.1.5"
+  }
+}

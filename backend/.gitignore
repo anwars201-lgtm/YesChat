@@ -1,0 +1,15 @@
+# Dependencies + build output — never commit these into the per-project workspace
+# git. The agent's autoCommit does `git add -A`; without this, every build commits
+# node_modules + dist (observed ~64 MB), which bloats git AND dominates the
+# reviewer's `git diff <firstCommit> HEAD` so the real app code gets truncated out
+# of the (size-capped) review diff — the reviewer then false-criticals "no app code
+# generated". node_modules is reinstalled at container start; dist is recompiled.
+node_modules/
+dist/
+*.log
+
+# Local env (DATABASE_URL + JWT/secret values) — regenerated at container start from
+# the container's env vars; keep secrets out of git.
+.env
+.env.*
+!.env.example

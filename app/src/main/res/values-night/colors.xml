@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Dark-mode splash / launch-window background (mirrors AppColors.background =
+      0xFF0F172A). Picked up automatically when the device is in dark mode, so the
+      launch screen matches the dark scaffold instead of flashing a light surface.
+    -->
+    <color name="splash_background">#FF0F172A</color>
+</resources>

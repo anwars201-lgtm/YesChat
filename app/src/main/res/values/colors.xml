@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The splash / launch-window background. This is a STATIC resource shown before
+      Compose (and the runtime palette in Color.kt) is available, so it can't read the
+      onboarding colour — keep it a neutral scaffold background that matches the app's
+      light/dark surface (the dark variant is in values-night/colors.xml). Mirrors
+      AppColors.lightBackground; the agent may retint it to the brand if desired.
+    -->
+    <color name="splash_background">#FFF8FAFC</color>
+</resources>

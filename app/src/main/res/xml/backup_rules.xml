@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Legacy V1 auth preferences must never be copied if an old install is upgraded. -->
+    <exclude domain="sharedpref" path="appmuse_auth.xml" />
+</full-backup-content>

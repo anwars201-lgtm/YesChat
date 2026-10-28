@@ -1,0 +1,18 @@
+# Build + tooling output
+build/
+.gradle/
+.kotlin/
+local.properties
+
+# Gradle wrapper jar + launch scripts are GENERATED in the image
+# (`gradle wrapper --gradle-version …`), not committed — the binary jar can't
+# live in git and the scripts are regenerated to match. Only
+# gradle/wrapper/gradle-wrapper.properties (which pins the version) is shipped.
+gradle/wrapper/gradle-wrapper.jar
+gradlew
+gradlew.bat
+
+# IDE
+*.iml
+.idea/
+*.hprof

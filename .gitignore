@@ -1,0 +1,5 @@
+
+# Platform internal — secrets / build-state / cross-build memory. Never commit.
+.appbuilder/
+.env
+.env.local

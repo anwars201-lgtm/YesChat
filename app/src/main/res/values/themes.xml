@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The LAUNCH (splash) theme. Uses the AndroidX core-splashscreen backport so the
+      brand splash looks identical on API 24-30 and uses the platform splash on 31+.
+      A branded launch screen (vs the old white flash) is one of the biggest "this is
+      a real, polished app" signals. `postSplashScreenTheme` hands off to Theme.Appmuse
+      once the first frame is ready.
+    -->
+    <style name="Theme.Appmuse.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.Appmuse</item>
+    </style>
+
+    <!--
+      The app activity theme. No action bar (Compose owns the whole UI) and a brand
+      window background (day/night via @color/splash_background) so there is no white
+      flash before Compose paints its first frame. enableEdgeToEdge() in MainActivity
+      draws content behind the system bars and adapts the bar-icon contrast to the
+      light/dark scheme; the real theming lives in AppmuseTheme (Compose), so this XML
+      theme stays intentionally minimal.
+    -->
+    <style name="Theme.Appmuse" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
+</resources>
