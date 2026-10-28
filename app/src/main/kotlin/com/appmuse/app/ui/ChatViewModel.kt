@@ -1,6 +1,9 @@
 package com.appmuse.app.ui
 
 import android.app.Application
+import android.net.Uri
+import com.appmuse.app.data.ChatAttachmentRepository
+import com.appmuse.app.model.ChatAttachment
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.appmuse.app.data.ConversationRepository
@@ -30,10 +33,22 @@ sealed interface ChatUiState {
     ) : ChatUiState
 }
 
+sealed interface ChatModelsUiState {
+    data object Loading : ChatModelsUiState
+    data class Success(val models: List<String>) : ChatModelsUiState
+    data class Error(val message: String) : ChatModelsUiState
+}
+
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val conversations = ConversationRepository.get(application)
     private val profiles = ProviderProfileRepository.get(application)
     private val provider = ProviderChatRepository()
+    private val attachmentReader = ChatAttachmentRepository(application)
+    private val _attachments = MutableStateFlow<List<ChatAttachment>>(emptyList())
+    val attachments = _attachments.asStateFlow()
+    private val _models = MutableStateFlow<ChatModelsUiState>(ChatModelsUiState.Loading)
+    val models = _models.asStateFlow()
+    private var modelsJob: Job? = null
     private val _state = MutableStateFlow<ChatUiState>(ChatUiState.Loading)
     val state = _state.asStateFlow()
     private val _draft = MutableStateFlow("")
@@ -75,9 +90,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             else {
                                 val selected = archiveState.conversations.firstOrNull { it.id == archiveState.selectedConversationId }
                                 val profileId = selected?.profileId ?: profileState.selectedProfileId
-                                ChatUiState.Success(selected, profileState.profiles, profileState.profiles.firstOrNull { it.id == profileId })
+                                ChatUiState.Success(selected, profileState.profiles, effectiveProfile(selected, profileState.profiles.firstOrNull { it.id == profileId }))
                             }
-                        }.collect { _state.value = it }
+                        }.collect { next ->
+                            val previous = _state.value as? ChatUiState.Success
+                            if (!_busy.value && previous != null && next is ChatUiState.Success &&
+                                previous.conversation?.id != next.conversation?.id) {
+                                _draft.value = ""
+                                _attachments.value = emptyList()
+                                _actionError.value = null
+                                modelsJob?.cancel()
+                            }
+                            _state.value = next
+                        }
                     }
                 } else refreshState()
             } catch (error: Exception) {
@@ -92,7 +117,90 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val settings = profiles.archive.value ?: return
         val selected = archive.conversations.firstOrNull { it.id == archive.selectedConversationId }
         val profileId = selected?.profileId ?: settings.selectedProfileId
-        _state.value = ChatUiState.Success(selected, settings.profiles, settings.profiles.firstOrNull { it.id == profileId })
+        _state.value = ChatUiState.Success(selected, settings.profiles, effectiveProfile(selected, settings.profiles.firstOrNull { it.id == profileId }))
+    }
+
+    private fun effectiveProfile(conversation: LocalConversation?, profile: ProviderProfile?): ProviderProfile? = profile?.copy(
+        model = conversation?.modelOverride ?: profile.model,
+        reasoningEffort = conversation?.reasoningOverride ?: profile.reasoningEffort,
+    )
+
+    fun loadModels() {
+        modelsJob?.cancel()
+        val profile = (_state.value as? ChatUiState.Success)?.selectedProfile ?: return
+        modelsJob = viewModelScope.launch {
+            _models.value = ChatModelsUiState.Loading
+            _models.value = try { ChatModelsUiState.Success(provider.fetchModels(profile)) }
+            catch (error: Exception) {
+                if (error is CancellationException) throw error
+                ChatModelsUiState.Error(ProviderChatRepository.providerError(error).userMessage)
+            }
+        }
+    }
+
+    fun setModel(value: String) {
+        val model = value.trim()
+        if (model.isBlank() || model.length > 200) {
+            _actionError.value = "Nama model wajib diisi dan maksimal 200 karakter."
+            return
+        }
+        updateOptions(model = model)
+    }
+
+    fun setReasoning(value: String) {
+        if (value !in setOf("default", "low", "medium", "high")) return
+        updateOptions(reasoning = value)
+    }
+
+    private fun updateOptions(model: String? = null, reasoning: String? = null) {
+        if (_busy.value) return
+        val current = _state.value as? ChatUiState.Success ?: return
+        if (current.selectedProfile == null) return
+        _busy.value = true
+        _actionError.value = null
+        viewModelScope.launch {
+            try {
+                val conversation = current.conversation ?: conversations.create("Percakapan baru")
+                conversations.updateConversation(conversation.id) {
+                    it.copy(profileId = current.selectedProfile.id, modelOverride = model ?: it.modelOverride,
+                        reasoningOverride = reasoning ?: it.reasoningOverride)
+                }
+                _notice.value = "Pilihan disimpan untuk percakapan ini."
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _actionError.value = "Pilihan belum tersimpan. Periksa penyimpanan perangkat dan coba lagi."
+            } finally { _busy.value = false }
+        }
+    }
+
+    fun attachFile(uri: Uri) {
+        if (_busy.value) return
+        if (_attachments.value.size >= ChatAttachmentRepository.MAX_ATTACHMENTS) {
+            _actionError.value = "Maksimal empat lampiran per pesan."
+            return
+        }
+        _busy.value = true
+        _actionError.value = null
+        viewModelScope.launch {
+            try {
+                val attachment = attachmentReader.read(uri)
+                require(_attachments.value.sumOf { it.sizeBytes } + attachment.sizeBytes <= ChatAttachmentRepository.MAX_TOTAL_BYTES) {
+                    "Total lampiran per pesan maksimal 12 MB."
+                }
+                _attachments.value += attachment
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _actionError.value = when (error) {
+                    is com.appmuse.app.data.ApiError -> error.userMessage
+                    is IllegalArgumentException -> error.message
+                    else -> "Lampiran tidak dapat dibaca. Gunakan gambar atau dokumen teks yang tersimpan di perangkat."
+                }
+            } finally { _busy.value = false }
+        }
+    }
+
+    fun removeAttachment(id: String) {
+        if (!_busy.value) _attachments.value = _attachments.value.filterNot { it.id == id }
     }
 
     fun setDraft(value: String) { _draft.value = value }
@@ -111,7 +219,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 profiles.select(id)
-                current.conversation?.let { c -> conversations.updateConversation(c.id) { it.copy(profileId = id) } }
+                current.conversation?.let { c -> conversations.updateConversation(c.id) { it.copy(profileId = id, modelOverride = null, reasoningOverride = null) } }
                 _notice.value = "Profil diganti. Permintaan berikutnya memakai riwayat lengkap dan instruksi sistem profil ini."
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
@@ -124,7 +232,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         if (_busy.value || streamJob?.isActive == true) return
         val current = _state.value as? ChatUiState.Success ?: return
         val text = _draft.value.trim()
-        if (text.isBlank()) return
+        val selectedAttachments = _attachments.value
+        if (text.isBlank() && selectedAttachments.isEmpty()) return
         val profile = current.selectedProfile ?: run {
             _actionError.value = "Pilih profil penyedia terlebih dahulu melalui Pengaturan."
             return
@@ -133,21 +242,23 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _streaming.value = true
         _actionError.value = null
         _draft.value = ""
+        _attachments.value = emptyList()
         _notice.value = null
         val now = System.currentTimeMillis()
-        val user = ConversationMessage(UUID.randomUUID().toString(), "user", text, now, profile.id, "pending")
+        val user = ConversationMessage(UUID.randomUUID().toString(), "user", text, now, profile.id, "pending", attachments = selectedAttachments)
+        val title = text.ifBlank { selectedAttachments.firstOrNull()?.name ?: "Percakapan baru" }.take(80)
         val assistantId = UUID.randomUUID().toString()
         var assistant = ConversationMessage(assistantId, "assistant", "", now + 1, profile.id, "streaming")
         val history = current.conversation?.messages.orEmpty() + user.copy(status = "complete")
         var target = current.conversation
-        val optimistic = target ?: LocalConversation(UUID.randomUUID().toString(), text.take(80), now, now, profile.id)
+        val optimistic = target ?: LocalConversation(UUID.randomUUID().toString(), title, now, now, profile.id)
         _state.value = current.copy(conversation = optimistic.copy(messages = optimistic.messages + user + assistant))
         streamJob = viewModelScope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
             var persisted = false
             var lastSaved = 0L
             try {
                 if (target == null) {
-                    target = conversations.create(text.take(80))
+                    target = conversations.create(title)
                 }
                 val targetId = requireNotNull(target).id
                 withContext(NonCancellable) {
@@ -157,8 +268,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     persisted = true
                 }
                 ensureActive()
-                provider.stream(profile, history).collect { token ->
-                    assistant = assistant.copy(content = assistant.content + token)
+                provider.stream(profile, history).collect { chunk ->
+                    assistant = assistant.copy(content = assistant.content + chunk.content, usage = chunk.usage ?: assistant.usage)
                     val visible = _state.value as? ChatUiState.Success
                     if (visible?.conversation?.id == targetId) {
                         _state.value = visible.copy(conversation = visible.conversation.copy(messages = visible.conversation.messages.map {
@@ -182,6 +293,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 assistant = assistant.copy(status = "failed")
                 _actionError.value = if (!persisted) {
                     _draft.value = text
+                    _attachments.value = selectedAttachments
                     "Pesan belum dapat disimpan. Periksa ruang penyimpanan lalu kirim ulang."
                 } else ProviderChatRepository.providerError(error).userMessage
             } finally {

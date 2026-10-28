@@ -2,6 +2,7 @@ package com.appmuse.app.data
 
 import com.appmuse.app.model.ConversationMessage
 import com.appmuse.app.model.ProviderProfile
+import com.appmuse.app.model.TokenUsage
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
@@ -23,6 +24,7 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import okhttp3.Call
 import okhttp3.Callback
@@ -68,10 +70,10 @@ class ProviderChatRepository {
             createdAt = System.currentTimeMillis(),
             profileId = profile.id,
             status = "complete",
-        ))).first { it.isNotBlank() }
+        ))).first { it.content.isNotBlank() }
     }
 
-    fun stream(profile: ProviderProfile, history: List<ConversationMessage>): Flow<String> = callbackFlow {
+    fun stream(profile: ProviderProfile, history: List<ConversationMessage>): Flow<Chunk> = callbackFlow {
         val call = client.newCall(buildRequest(profile, history))
         call.enqueue(object : Callback {
             override fun onFailure(call: Call, error: IOException) {
@@ -96,7 +98,7 @@ class ProviderChatRepository {
                             if (event.trim() == "[DONE]") return true
                             val chunk = parseChunk(event)
                             if (chunk.finished) sawFinish = true
-                            if (chunk.content.isNotEmpty()) trySend(chunk.content)
+                            if (chunk.content.isNotEmpty() || chunk.usage != null) trySend(chunk)
                             return false
                         }
                         while (!call.isCanceled()) {
@@ -171,13 +173,34 @@ class ProviderChatRepository {
             val body = buildJsonObject {
                 put("model", profile.model)
                 put("stream", true)
+                put("stream_options", buildJsonObject { put("include_usage", true) })
                 if (profile.reasoningEffort != "default") put("reasoning_effort", profile.reasoningEffort)
                 put("messages", buildJsonArray {
                     if (profile.systemPrompt.isNotBlank()) add(buildJsonObject {
                         put("role", "system"); put("content", profile.systemPrompt)
                     })
-                    history.filter { it.role in setOf("user", "assistant") && it.content.isNotBlank() }.forEach { message ->
-                        add(buildJsonObject { put("role", message.role); put("content", message.content) })
+                    history.filter { it.role in setOf("user", "assistant") && (it.content.isNotBlank() || it.attachments.isNotEmpty()) }.forEach { message ->
+                        add(buildJsonObject {
+                            put("role", message.role)
+                            val text = buildString {
+                                append(message.content)
+                                message.attachments.filterNot { it.isImage }.forEach { attachment ->
+                                    append("\n\n[Lampiran: ").append(attachment.name).append("]\n")
+                                    append(attachment.data)
+                                }
+                            }
+                            val images = message.attachments.filter { it.isImage }
+                            if (images.isEmpty()) put("content", text)
+                            else put("content", buildJsonArray {
+                                if (text.isNotBlank()) add(buildJsonObject { put("type", "text"); put("text", text) })
+                                images.forEach { image ->
+                                    add(buildJsonObject {
+                                        put("type", "image_url")
+                                        put("image_url", buildJsonObject { put("url", "data:${image.mimeType};base64,${image.data}") })
+                                    })
+                                }
+                            })
+                        })
                     }
                 })
             }
@@ -188,23 +211,29 @@ class ProviderChatRepository {
                 .build()
         }
 
-        data class Chunk(val content: String = "", val finished: Boolean = false)
+        data class Chunk(val content: String = "", val finished: Boolean = false, val usage: TokenUsage? = null)
 
         fun parseChunk(data: String): Chunk {
             val root = json.parseToJsonElement(data).jsonObject
             if (root["error"] != null) throw ApiError.Server("Penyedia menghentikan permintaan. Periksa model, kuota, dan parameter profil.")
-            val choice = (root["choices"] as? JsonArray)?.firstOrNull() as? JsonObject ?: return Chunk()
+            val rawUsage = root["usage"] as? JsonObject
+            fun count(key: String) = (rawUsage?.get(key) as? JsonPrimitive)?.longOrNull?.takeIf { it >= 0 }
+            val prompt = count("prompt_tokens")
+            val completion = count("completion_tokens")
+            val total = count("total_tokens") ?: if (prompt != null && completion != null) prompt + completion else null
+            val usage = if (prompt != null || completion != null || total != null) TokenUsage(prompt, completion, total) else null
+            val choice = (root["choices"] as? JsonArray)?.firstOrNull() as? JsonObject ?: return Chunk(usage = usage)
             val delta = choice["delta"] as? JsonObject
             val content = (delta?.get("content") as? JsonPrimitive)?.contentOrNull.orEmpty()
             val reason = (choice["finish_reason"] as? JsonPrimitive)?.contentOrNull
             if (reason == "content_filter") throw ApiError.Validation("Balasan dibatasi oleh kebijakan penyedia. Teks sebelumnya tetap disimpan.")
-            return Chunk(content, reason != null)
+            return Chunk(content, reason != null, usage)
         }
 
         fun httpError(code: Int): ApiError = when (code) {
             401, 403 -> ApiError.Auth("API Key ditolak atau tidak memiliki izin. Periksa profil di Pengaturan.")
             404 -> ApiError.NotFound("Model atau endpoint tidak ditemukan. Periksa model dan Base URL, termasuk akhiran /v1 bila diperlukan.")
-            400, 405, 422 -> ApiError.Validation("Model atau parameter tidak didukung. Periksa model, instruksi sistem, dan tingkat penalaran.")
+            400, 405, 422 -> ApiError.Validation("Model atau parameter tidak didukung. Periksa model, penalaran, dukungan gambar, serta stream_options untuk pelaporan token.")
             408, 504 -> ApiError.Network("Penyedia terlalu lama merespons. Coba lagi.")
             429 -> ApiError.Server("Batas permintaan atau kuota tercapai. Tunggu sebentar atau periksa saldo penyedia.")
             in 300..399 -> ApiError.Validation("Penyedia mengalihkan URL. Gunakan Base URL HTTPS tujuan secara langsung demi keamanan API Key.")

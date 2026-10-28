@@ -1,6 +1,22 @@
 package com.appmuse.app.ui
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
+import com.appmuse.app.ui.components.ChatTopBar
+import com.appmuse.app.ui.theme.AppSpacing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,7 +40,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.appmuse.app.model.User
 import com.appmuse.app.ui.design.DesignProfileTokens
-import com.appmuse.app.ui.screens.ProfileScreen
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.appmuse.app.R
@@ -49,7 +64,7 @@ import com.appmuse.app.ui.screens.ProviderSettingsScreen
  * whole chrome follows the user's chosen colors automatically.
  */
 private enum class Dest(val route: String, val label: String, val icon: ImageVector, @StringRes val titleRes: Int? = null, @StringRes val labelRes: Int? = null) {
-    Profile("profile", "Profil", Icons.Filled.Person),
+    Profile("profile", "Pengaturan", Icons.Filled.Settings, R.string.appmuse_feature_provider_settings_title, R.string.appmuse_feature_provider_settings_nav),
     Conversations("conversations", "Percakapan", Icons.AutoMirrored.Filled.Chat, R.string.appmuse_feature_conversations_title, R.string.appmuse_feature_conversations_nav),
     Chat("chat", "Chat", Icons.AutoMirrored.Filled.Chat, R.string.appmuse_feature_chat_title, R.string.appmuse_feature_chat_nav),
     ProviderSettings("provider_settings", "Pengaturan", Icons.Filled.Settings, R.string.appmuse_feature_provider_settings_title, R.string.appmuse_feature_provider_settings_nav),
@@ -60,14 +75,53 @@ private enum class Dest(val route: String, val label: String, val icon: ImageVec
 fun AppNav(user: User, onLogout: () -> Unit) {
     val nav = rememberNavController()
     val tabDestinations = listOf(Dest.Conversations, Dest.Profile)
+    val chatVm: ChatViewModel = viewModel()
+    val chatState by chatVm.state.collectAsStateWithLifecycle()
+    val streaming by chatVm.streaming.collectAsStateWithLifecycle()
+    val chatBusy by chatVm.busy.collectAsStateWithLifecycle()
+    val drawer = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Dest.Conversations.route
-    val current = Dest.values().firstOrNull { it.route == currentRoute } ?: Dest.Conversations
+    val current = if (currentRoute == Dest.ProviderSettings.route) Dest.Profile
+        else Dest.entries.firstOrNull { it.route == currentRoute } ?: Dest.Conversations
 
+    ModalNavigationDrawer(
+        drawerState = drawer,
+        gesturesEnabled = current == Dest.Chat && !chatBusy,
+        drawerContent = {
+            ModalDrawerSheet(Modifier.fillMaxWidth(0.88f).fillMaxHeight()) {
+                if (chatBusy) {
+                    Column(Modifier.padding(AppSpacing.base)) {
+                        Text("Hentikan balasan sebelum berpindah percakapan.")
+                        TextButton(onClick = chatVm::stopKeepPartial) { Text(stringResource(R.string.appmuse_action_chat_stop)) }
+                    }
+                } else {
+                    ConversationsScreen(onOpenConversation = {
+                        scope.launch { drawer.close() }
+                        if (current != Dest.Chat) nav.navigate(Dest.Chat.route) { launchSingleTop = true }
+                    })
+                }
+            }
+        },
+    ) {
     Scaffold(
         topBar = {
-            TopAppBar(
+            if (current == Dest.Chat) {
+                val latestAssistant = (chatState as? ChatUiState.Success)?.conversation?.messages?.lastOrNull { it.role == "assistant" }
+                ChatTopBar(
+                    usage = latestAssistant?.usage,
+                    streaming = streaming,
+                    onOpenSidebar = { scope.launch { drawer.open() } },
+                    onOpenSettings = { nav.navigate(Dest.Profile.route) { launchSingleTop = true } },
+                )
+            } else TopAppBar(
                 title = { Text(current.titleRes?.let { stringResource(it) } ?: current.label) },
+                navigationIcon = {
+                    if (current == Dest.ProviderSettings || current == Dest.Profile) IconButton(onClick = { nav.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     scrolledContainerColor = MaterialTheme.colorScheme.surface,
@@ -76,7 +130,7 @@ fun AppNav(user: User, onLogout: () -> Unit) {
             )
         },
         bottomBar = {
-            NavigationBar(
+            if (current != Dest.Chat) NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = DesignProfileTokens.navigationElevation,
             ) {
@@ -114,18 +168,19 @@ fun AppNav(user: User, onLogout: () -> Unit) {
             startDestination = Dest.Conversations.route,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(Dest.Profile.route) { ProfileScreen(user, onLogout) }
+            composable(Dest.Profile.route) { ProviderSettingsScreen() }
             composable(Dest.Conversations.route) {
                 ConversationsScreen(onOpenConversation = { _ ->
                     nav.navigate(Dest.Chat.route) { launchSingleTop = true }
                 })
             }
             composable(Dest.Chat.route) {
-                ChatScreen(onOpenSettings = {
-                    nav.navigate(Dest.ProviderSettings.route) { launchSingleTop = true }
+                ChatScreen(vm = chatVm, onOpenSettings = {
+                    nav.navigate(Dest.Profile.route) { launchSingleTop = true }
                 })
             }
             composable(Dest.ProviderSettings.route) { ProviderSettingsScreen() }
         }
+    }
     }
 }

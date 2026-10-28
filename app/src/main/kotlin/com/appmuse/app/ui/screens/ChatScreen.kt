@@ -8,6 +8,11 @@ package com.appmuse.app.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.appmuse.app.ui.components.ChatComposer
+import com.appmuse.app.ui.components.ModelDialog
+import com.appmuse.app.ui.components.ReasoningDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -99,6 +104,13 @@ fun ChatScreen(
     val actionError by vm.actionError.collectAsStateWithLifecycle()
     val notice by vm.notice.collectAsStateWithLifecycle()
     var showProfiles by rememberSaveable { mutableStateOf(false) }
+    var showModels by rememberSaveable { mutableStateOf(false) }
+    var showReasoning by rememberSaveable { mutableStateOf(false) }
+    val attachments by vm.attachments.collectAsStateWithLifecycle()
+    val models by vm.models.collectAsStateWithLifecycle()
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(vm::attachFile)
+    }
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     val copyLabel = stringResource(R.string.appmuse_action_chat_copy)
@@ -128,12 +140,6 @@ fun ChatScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
                 ) {
-                    Box(
-                        Modifier.size(AppSpacing.xxl).background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Chat, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                    }
                     Column(Modifier.weight(1f)) {
                         Text(
                             current.conversation?.title ?: stringResource(R.string.appmuse_feature_chat_title),
@@ -145,11 +151,6 @@ fun ChatScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
-                    }
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onOpenSettings, enabled = !busy) {
-                        Text(stringResource(R.string.appmuse_feature_provider_settings_nav))
                     }
                     TextButton(onClick = { showProfiles = true }, enabled = !busy) {
                         Text(stringResource(R.string.appmuse_action_chat_switch_profile))
@@ -190,14 +191,32 @@ fun ChatScreen(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
-                ComposerBar(
+                ChatComposer(
                     draft = draft,
                     onDraftChange = vm::setDraft,
                     busy = busy,
                     streaming = streaming,
-                    configured = current.selectedProfile != null,
+                    model = current.selectedProfile?.model,
+                    reasoning = current.selectedProfile?.reasoningEffort,
+                    attachments = attachments,
                     onSend = vm::sendAndStream,
                     onStop = vm::stopKeepPartial,
+                    onReasoning = { showReasoning = true },
+                    onModel = { showModels = true; vm.loadModels() },
+                    onAttach = { filePicker.launch(arrayOf("image/png", "image/jpeg", "image/gif", "image/webp", "text/plain", "text/markdown", "text/csv", "application/json")) },
+                    onRemoveAttachment = vm::removeAttachment,
+                )
+                if (showReasoning && current.selectedProfile != null) ReasoningDialog(
+                    selected = current.selectedProfile.reasoningEffort,
+                    onSelect = { vm.setReasoning(it); showReasoning = false },
+                    onDismiss = { showReasoning = false },
+                )
+                if (showModels && current.selectedProfile != null) ModelDialog(
+                    selected = current.selectedProfile.model,
+                    state = models,
+                    onRetry = vm::loadModels,
+                    onSelect = { vm.setModel(it); showModels = false },
+                    onDismiss = { showModels = false },
                 )
                 if (showProfiles) {
                     AlertDialog(
@@ -233,57 +252,6 @@ fun ChatScreen(
             }
         }
         SnackbarHost(snackbar)
-    }
-}
-
-@Composable
-private fun ComposerBar(
-    draft: String,
-    onDraftChange: (String) -> Unit,
-    busy: Boolean,
-    streaming: Boolean,
-    configured: Boolean,
-    onSend: () -> Unit,
-    onStop: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = AppSpacing.sm, vertical = AppSpacing.xs),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        Column(
-            Modifier.padding(AppSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-        ) {
-        OutlinedTextField(
-            value = draft,
-            onValueChange = onDraftChange,
-            label = { Text("Pesan") },
-            placeholder = { Text("Tulis pesan…") },
-            modifier = Modifier.fillMaxWidth(),
-            maxLines = 5,
-            shape = MaterialTheme.shapes.large,
-        )
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Tersimpan di perangkat",
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (streaming) {
-                Button(onClick = onStop) {
-                    Icon(Icons.Outlined.StopCircle, contentDescription = null)
-                    Text(stringResource(R.string.appmuse_action_chat_stop), Modifier.padding(start = AppSpacing.sm))
-                }
-            } else {
-                Button(onClick = onSend, enabled = !busy && configured && draft.isNotBlank()) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
-                    Text(stringResource(R.string.appmuse_action_chat_send), Modifier.padding(start = AppSpacing.sm))
-                }
-            }
-        }
-        }
     }
 }
 
@@ -344,6 +312,19 @@ private fun BubbleList(
                     ) {
                         Column(Modifier.padding(AppSpacing.md), verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
                             Text(if (outgoing) "Anda" else "AI", style = MaterialTheme.typography.labelMedium)
+                            message.attachments.forEach { attachment ->
+                                Surface(
+                                    shape = MaterialTheme.shapes.medium,
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                ) {
+                                    Text(
+                                        "Lampiran: ${attachment.name}",
+                                        Modifier.padding(AppSpacing.sm),
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
+                                }
+                            }
                             if (message.content.isEmpty() && message.status == "streaming") {
                                 LinearProgressIndicator()
                             } else {

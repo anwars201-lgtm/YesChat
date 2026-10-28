@@ -10,6 +10,8 @@ data class LocalConversation(
     val updatedAt: Long,
     val profileId: String? = null,
     val messages: List<ConversationMessage> = emptyList(),
+    val modelOverride: String? = null,
+    val reasoningOverride: String? = null,
 )
 
 @Serializable
@@ -20,7 +22,27 @@ data class ConversationMessage(
     val createdAt: Long,
     val profileId: String? = null,
     val status: String = "complete",
+    val usage: TokenUsage? = null,
+    val attachments: List<ChatAttachment> = emptyList(),
 )
+
+@Serializable
+data class TokenUsage(
+    val promptTokens: Long? = null,
+    val completionTokens: Long? = null,
+    val totalTokens: Long? = null,
+)
+
+@Serializable
+data class ChatAttachment(
+    val id: String,
+    val name: String,
+    val mimeType: String,
+    val sizeBytes: Long,
+    val data: String,
+) {
+    val isImage: Boolean get() = mimeType.startsWith("image/")
+}
 
 @Serializable
 data class ConversationArchive(
