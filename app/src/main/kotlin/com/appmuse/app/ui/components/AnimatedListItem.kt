@@ -31,7 +31,7 @@ fun AnimatedListItem(
     index: Int,
     modifier: Modifier = Modifier,
     perItemStaggerMillis: Int = 40,
-    maxTotalDelayMillis: Int = 300,
+    maxTotalDelayMillis: Int = 0,
     content: @Composable () -> Unit,
 ) {
     val reduceMotion = rememberItemReducedMotion()
@@ -45,11 +45,12 @@ fun AnimatedListItem(
             progress.snapTo(1f)
             return@LaunchedEffect
         }
-        val delayMs = minOf(index * perItemStaggerMillis, maxTotalDelayMillis).toLong()
-        delay(delayMs)
+        val delayMs = minOf(index * perItemStaggerMillis, maxTotalDelayMillis)
+            .coerceIn(0, AppMotion.quick - AppMotion.micro)
+        delay(delayMs.toLong())
         progress.animateTo(
             targetValue = 1f,
-            animationSpec = tween(AppMotion.standard, easing = AppMotion.standardEasing),
+            animationSpec = tween(AppMotion.quick - delayMs, easing = AppMotion.standardEasing),
         )
     }
 

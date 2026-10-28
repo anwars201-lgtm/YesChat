@@ -8,14 +8,15 @@ import androidx.compose.animation.core.Easing
  * Kotlin mirror of the Flutter template's motion tokens). Use with
  * `tween(AppMotion.standard, easing = AppMotion.emphasized)` in
  * `animate*AsState`/`AnimatedVisibility` so motion feels consistent and intentional,
- * never gratuitous. Keep reveals subtle (quick/standard); reserve slow for hero
- * transitions.
+ * never gratuitous. Routine motion, including legacy standard/slow tokens, is
+ * capped at 200 ms. Continuous loading shimmer has a separate calm cycle.
  */
 object AppMotion {
     const val micro = 120
     const val quick = 200
-    const val standard = 320
-    const val slow = 520
+    const val standard = quick
+    const val slow = quick
+    const val shimmerCycle = 1040
 
     /** Standard decelerate — most entrances. */
     val standardEasing: Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)

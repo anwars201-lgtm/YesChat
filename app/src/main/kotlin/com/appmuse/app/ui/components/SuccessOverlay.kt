@@ -60,8 +60,8 @@ fun SuccessOverlay(
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(AppMotion.quick)),
-        exit = fadeOut(tween(AppMotion.quick)),
+        enter = fadeIn(tween(if (reduceMotion) 0 else AppMotion.quick)),
+        exit = fadeOut(tween(if (reduceMotion) 0 else AppMotion.quick)),
         modifier = modifier,
     ) {
         // Dimmed scrim over the whole screen.

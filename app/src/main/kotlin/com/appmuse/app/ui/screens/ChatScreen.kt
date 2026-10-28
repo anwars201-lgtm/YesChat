@@ -119,6 +119,7 @@ fun ChatScreen(
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
         when (val current = state) {
             ChatUiState.Loading -> Box(Modifier.weight(1f)) { SkeletonList() }
@@ -195,7 +196,11 @@ fun ChatScreen(
                 )
             }
         }
-        SnackbarHost(snackbar)
+    }
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier.align(Alignment.TopCenter).padding(AppSpacing.base),
+        )
     }
 }
 

@@ -55,7 +55,7 @@ fun AnimatedCounter(
         } else {
             animated.animateTo(
                 targetValue = value.toFloat(),
-                animationSpec = tween(durationMillis = durationMillis, easing = AppMotion.standardEasing),
+                animationSpec = tween(durationMillis = durationMillis.coerceIn(0, AppMotion.quick), easing = AppMotion.standardEasing),
             )
         }
     }

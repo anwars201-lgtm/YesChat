@@ -1,5 +1,12 @@
 package com.appmuse.app.ui
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -38,7 +45,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.appmuse.app.model.User
+import com.appmuse.app.ui.components.rememberReducedMotion
+import com.appmuse.app.ui.theme.AppMotion
 import com.appmuse.app.ui.design.DesignProfileTokens
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
@@ -50,7 +58,7 @@ import com.appmuse.app.ui.screens.ChatScreen
 import com.appmuse.app.ui.screens.ProviderSettingsScreen
 
 /**
- * Top-level navigation for the authenticated app — a Compose-Navigation NavHost
+ * Top-level navigation for the local-only app — a Compose-Navigation NavHost
  * behind a bottom NavigationBar. This is the REFERENCE wiring the agent extends:
  * add a destination by adding a [Dest] entry + a `composable(route) { … }`. The
  * single Scaffold owns the TopAppBar (title follows the current route) and the
@@ -72,8 +80,9 @@ private enum class Dest(val route: String, val label: String, val icon: ImageVec
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNav(user: User, onLogout: () -> Unit) {
+fun AppNav() {
     val nav = rememberNavController()
+    val reduceMotion = rememberReducedMotion()
     val tabDestinations = listOf(Dest.Conversations, Dest.Profile)
     val chatVm: ChatViewModel = viewModel()
     val chatState by chatVm.state.collectAsStateWithLifecycle()
@@ -164,6 +173,26 @@ fun AppNav(user: User, onLogout: () -> Unit) {
             navController = nav,
             startDestination = Dest.Conversations.route,
             modifier = Modifier.padding(innerPadding),
+            enterTransition = {
+                if (reduceMotion || initialState.destination.route == targetState.destination.route) EnterTransition.None
+                else fadeIn(tween(AppMotion.quick, easing = AppMotion.standardEasing)) +
+                    slideInHorizontally(tween(AppMotion.quick, easing = AppMotion.standardEasing)) { it / 32 }
+            },
+            exitTransition = {
+                if (reduceMotion || initialState.destination.route == targetState.destination.route) ExitTransition.None
+                else fadeOut(tween(AppMotion.quick, easing = AppMotion.standardEasing)) +
+                    slideOutHorizontally(tween(AppMotion.quick, easing = AppMotion.standardEasing)) { -it / 32 }
+            },
+            popEnterTransition = {
+                if (reduceMotion || initialState.destination.route == targetState.destination.route) EnterTransition.None
+                else fadeIn(tween(AppMotion.quick, easing = AppMotion.standardEasing)) +
+                    slideInHorizontally(tween(AppMotion.quick, easing = AppMotion.standardEasing)) { -it / 32 }
+            },
+            popExitTransition = {
+                if (reduceMotion || initialState.destination.route == targetState.destination.route) ExitTransition.None
+                else fadeOut(tween(AppMotion.quick, easing = AppMotion.standardEasing)) +
+                    slideOutHorizontally(tween(AppMotion.quick, easing = AppMotion.standardEasing)) { it / 32 }
+            },
         ) {
             composable(Dest.Profile.route) { ProviderSettingsScreen() }
             composable(Dest.Conversations.route) {

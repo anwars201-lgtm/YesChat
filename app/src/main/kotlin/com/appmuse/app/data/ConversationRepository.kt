@@ -28,9 +28,17 @@ class ConversationRepository private constructor(context: Context) {
         mutex.withLock { readLocked().also { _archive.value = it } }
     }
 
-    suspend fun create(title: String): LocalConversation {
+    suspend fun create(
+        title: String,
+        profileId: String? = null,
+        modelOverride: String? = null,
+        reasoningOverride: String? = null,
+    ): LocalConversation {
         val now = System.currentTimeMillis()
-        val conversation = LocalConversation(UUID.randomUUID().toString(), title, now, now)
+        val conversation = LocalConversation(
+            UUID.randomUUID().toString(), title, now, now,
+            profileId = profileId, modelOverride = modelOverride, reasoningOverride = reasoningOverride,
+        )
         update { ConversationChanges.create(it, conversation) }
         return conversation
     }

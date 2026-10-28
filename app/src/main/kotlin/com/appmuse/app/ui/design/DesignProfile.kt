@@ -37,7 +37,7 @@ object DesignProfileTokens {
     const val composition = "bento-playground"
     const val navigationStyle = "tabs"
     const val motionStyle = "playful"
-    const val motionDurationMs = 340
+    const val motionDurationMs = com.appmuse.app.ui.theme.AppMotion.quick
     val cardRadius = 24.dp
     val cardPadding = 16.dp
     val navigationElevation = 5.dp

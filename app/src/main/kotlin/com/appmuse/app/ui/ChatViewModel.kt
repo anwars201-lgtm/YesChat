@@ -49,6 +49,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _models = MutableStateFlow<ChatModelsUiState>(ChatModelsUiState.Loading)
     val models = _models.asStateFlow()
     private var modelsJob: Job? = null
+    private var optionsJob: Job? = null
     private val _state = MutableStateFlow<ChatUiState>(ChatUiState.Loading)
     val state = _state.asStateFlow()
     private val _draft = MutableStateFlow("")
@@ -94,8 +95,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             }
                         }.collect { next ->
                             val previous = _state.value as? ChatUiState.Success
-                            if (!_busy.value && previous != null && next is ChatUiState.Success &&
-                                previous.conversation?.id != next.conversation?.id) {
+                            if (!_busy.value && previous?.conversation != null && next is ChatUiState.Success &&
+                                previous.conversation.id != next.conversation?.id) {
                                 _draft.value = ""
                                 _attachments.value = emptyList()
                                 _actionError.value = null
@@ -155,21 +156,31 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private fun updateOptions(model: String? = null, reasoning: String? = null) {
         if (_busy.value) return
         val current = _state.value as? ChatUiState.Success ?: return
-        if (current.selectedProfile == null) return
-        _busy.value = true
-        _actionError.value = null
-        viewModelScope.launch {
+        val profile = current.selectedProfile ?: return
+        val previousSave = optionsJob
+        optionsJob = viewModelScope.launch {
+            previousSave?.join()
             try {
-                val conversation = current.conversation ?: conversations.create("Percakapan baru")
-                conversations.updateConversation(conversation.id) {
-                    it.copy(profileId = current.selectedProfile.id, modelOverride = model ?: it.modelOverride,
-                        reasoningOverride = reasoning ?: it.reasoningOverride)
+                val conversation = current.conversation ?: conversations.archive.value?.let { archive ->
+                    archive.conversations.firstOrNull { it.id == archive.selectedConversationId }
                 }
-                _notice.value = "Pilihan disimpan untuk percakapan ini."
+                if (conversation == null) {
+                    conversations.create(
+                        title = "Percakapan baru",
+                        profileId = profile.id,
+                        modelOverride = model ?: profile.model,
+                        reasoningOverride = reasoning ?: profile.reasoningEffort,
+                    )
+                } else {
+                    conversations.updateConversation(conversation.id) {
+                        it.copy(profileId = profile.id, modelOverride = model ?: it.modelOverride,
+                            reasoningOverride = reasoning ?: it.reasoningOverride)
+                    }
+                }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 _actionError.value = "Pilihan belum tersimpan. Periksa penyimpanan perangkat dan coba lagi."
-            } finally { _busy.value = false }
+            }
         }
     }
 
@@ -230,6 +241,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sendAndStream() {
         if (_busy.value || streamJob?.isActive == true) return
+        val pendingOptions = optionsJob
+        if (pendingOptions?.isActive == true) {
+            viewModelScope.launch {
+                pendingOptions.join()
+                refreshState()
+                sendAndStream()
+            }
+            return
+        }
         val current = _state.value as? ChatUiState.Success ?: return
         val text = _draft.value.trim()
         val selectedAttachments = _attachments.value

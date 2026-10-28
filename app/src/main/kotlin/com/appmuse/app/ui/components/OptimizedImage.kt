@@ -102,7 +102,7 @@ private fun rememberImageShimmerBrush(): Brush {
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = AppMotion.slow * 2, easing = AppMotion.standardEasing),
+            animation = tween(durationMillis = AppMotion.shimmerCycle, easing = AppMotion.standardEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "image-shimmer-translate",
