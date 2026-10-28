@@ -1,101 +1,119 @@
+// DESIGN ENGINE V2 GENERATED — profile=playful; edit via an explicit redesign.
 package com.appmuse.app.ui.theme
 
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 
-/**
- * Palette — the single source of truth for app colors (the Kotlin equivalent of
- * the Flutter template's AppColors). The agent edits THESE values to match the
- * user's chosen design/colorPalette, then everything reads from MaterialTheme.
- * Never hardcode Color(...) in screens — use MaterialTheme.colorScheme.* or add
- * a token here.
- */
 object AppColors {
-    val primary = Color(0xFF6366F1) // indigo
-    val secondary = Color(0xFF8B5CF6) // purple
-    val error = Color(0xFFEF4444)
-    val onPrimary = Color(0xFFFFFFFF)
-
-    // Dark scheme
-    val background = Color(0xFF0F172A)
-    val surface = Color(0xFF1E293B)
-    val onBackground = Color(0xFFF8FAFC)
-    val onSurface = Color(0xFFE2E8F0)
-    val surfaceVariant = Color(0xFF273449) // card/field fill on dark
-    val onSurfaceVariant = Color(0xFF94A3B8) // labels/hints on dark
-    val outline = Color(0xFF475569) // borders on dark
-
-    // Light scheme
-    val lightBackground = Color(0xFFF8FAFC)
+    val lightPrimary = Color(0xFF494BD6)
+    val lightOnPrimary = Color(0xFFFFFFFF)
+    val lightPrimaryContainer = Color(0xFFE1E0FF)
+    val lightOnPrimaryContainer = Color(0xFF07006C)
+    val lightSecondary = Color(0xFF6D3BD7)
+    val lightOnSecondary = Color(0xFFFFFFFF)
+    val lightSecondaryContainer = Color(0xFFE9DDFF)
+    val lightOnSecondaryContainer = Color(0xFF23005C)
+    val lightTertiary = Color(0xFF795369)
+    val lightOnTertiary = Color(0xFFFFFFFF)
+    val lightTertiaryContainer = Color(0xFFFFD8EC)
+    val lightOnTertiaryContainer = Color(0xFF2E1125)
+    val lightBackground = Color(0xFFFCF8FD)
+    val lightOnBackground = Color(0xFF1C1B1F)
     val lightSurface = Color(0xFFFFFFFF)
-    val lightOnBackground = Color(0xFF0F172A)
-    val lightOnSurface = Color(0xFF1E293B)
-    val lightSurfaceVariant = Color(0xFFEEF1F6) // card/field fill on light
-    val lightOnSurfaceVariant = Color(0xFF64748B) // labels/hints on light
-    val lightOutline = Color(0xFFCBD5E1) // borders on light
+    val lightOnSurface = Color(0xFF1C1B1F)
+    val lightSurfaceVariant = Color(0xFFE7E4EF)
+    val lightOnSurfaceVariant = Color(0xFF46464F)
+    val lightOutline = Color(0xFF777680)
+    val lightError = Color(0xFFBA1A1A)
+    val lightOnError = Color(0xFFFFFFFF)
 
-    // Container + tertiary roles — DERIVED from primary/secondary so recoloring just
-    // `primary`/`secondary` cascades to the whole chrome (the nav indicator pill, M3
-    // tonal surfaces, tinted accent chips/cards). The agent recolors primary/secondary
-    // in Todo 2 and these follow automatically; the on* colors use the near-black/near-
-    // white text tones so contrast holds on any palette. surfaceTint is pinned so
-    // elevated surfaces tint toward the brand instead of M3's indigo default.
-    val tertiary = secondary
-    val onTertiary = onPrimary
+    val darkPrimary = Color(0xFFC0C1FF)
+    val darkOnPrimary = Color(0xFF1000A9)
+    val darkPrimaryContainer = Color(0xFF2F2EBE)
+    val darkOnPrimaryContainer = Color(0xFFE1E0FF)
+    val darkSecondary = Color(0xFFD0BCFF)
+    val darkOnSecondary = Color(0xFF3C0091)
+    val darkSecondaryContainer = Color(0xFF5516BE)
+    val darkOnSecondaryContainer = Color(0xFFE9DDFF)
+    val darkTertiary = Color(0xFFE9B9D3)
+    val darkOnTertiary = Color(0xFF46263A)
+    val darkTertiaryContainer = Color(0xFF5F3C51)
+    val darkOnTertiaryContainer = Color(0xFFFFD8EC)
+    val darkBackground = Color(0xFF131316)
+    val darkOnBackground = Color(0xFFE5E1E6)
+    val darkSurface = Color(0xFF1E1D21)
+    val darkOnSurface = Color(0xFFE5E1E6)
+    val darkSurfaceVariant = Color(0xFF393841)
+    val darkOnSurfaceVariant = Color(0xFFC8C5D0)
+    val darkOutline = Color(0xFF918F9A)
+    val darkError = Color(0xFFFFB4AB)
+    val darkOnError = Color(0xFF690005)
 
-    // Light scheme containers (light tints of the accent; dark readable text on top)
-    val lightPrimaryContainer = lerp(lightSurface, primary, 0.16f)
-    val lightOnPrimaryContainer = lightOnBackground
-    val lightSecondaryContainer = lerp(lightSurface, secondary, 0.16f)
-    val lightOnSecondaryContainer = lightOnBackground
-
-    // Dark scheme containers (deeper tints of the accent; light readable text on top)
-    val darkPrimaryContainer = lerp(surface, primary, 0.30f)
-    val darkOnPrimaryContainer = onBackground
-    val darkSecondaryContainer = lerp(surface, secondary, 0.30f)
-    val darkOnSecondaryContainer = onBackground
+    // Compatibility aliases for template components. New code reads MaterialTheme roles.
+    val primary = darkPrimary
+    val secondary = darkSecondary
+    val error = darkError
+    val onPrimary = darkOnPrimary
+    val onSecondary = darkOnSecondary
+    val onError = darkOnError
+    val background = darkBackground
+    val surface = darkSurface
+    val onBackground = darkOnBackground
+    val onSurface = darkOnSurface
+    val surfaceVariant = darkSurfaceVariant
+    val onSurfaceVariant = darkOnSurfaceVariant
+    val outline = darkOutline
+    val tertiary = darkTertiary
+    val onTertiary = darkOnTertiary
 }
 
 val DarkColors = darkColorScheme(
-    primary = AppColors.primary,
-    secondary = AppColors.secondary,
-    tertiary = AppColors.tertiary,
-    background = AppColors.background,
-    surface = AppColors.surface,
-    surfaceVariant = AppColors.surfaceVariant,
-    surfaceTint = AppColors.primary,
+    primary = AppColors.darkPrimary,
+    onPrimary = AppColors.darkOnPrimary,
     primaryContainer = AppColors.darkPrimaryContainer,
     onPrimaryContainer = AppColors.darkOnPrimaryContainer,
+    secondary = AppColors.darkSecondary,
+    onSecondary = AppColors.darkOnSecondary,
     secondaryContainer = AppColors.darkSecondaryContainer,
     onSecondaryContainer = AppColors.darkOnSecondaryContainer,
-    error = AppColors.error,
-    onPrimary = AppColors.onPrimary,
-    onTertiary = AppColors.onTertiary,
-    onBackground = AppColors.onBackground,
-    onSurface = AppColors.onSurface,
-    onSurfaceVariant = AppColors.onSurfaceVariant,
-    outline = AppColors.outline,
+    tertiary = AppColors.darkTertiary,
+    onTertiary = AppColors.darkOnTertiary,
+    tertiaryContainer = AppColors.darkTertiaryContainer,
+    onTertiaryContainer = AppColors.darkOnTertiaryContainer,
+    background = AppColors.darkBackground,
+    onBackground = AppColors.darkOnBackground,
+    surface = AppColors.darkSurface,
+    onSurface = AppColors.darkOnSurface,
+    surfaceVariant = AppColors.darkSurfaceVariant,
+    onSurfaceVariant = AppColors.darkOnSurfaceVariant,
+    outline = AppColors.darkOutline,
+    error = AppColors.darkError,
+    onError = AppColors.darkOnError,
+    surfaceTint = AppColors.darkPrimary,
 )
 
 val LightColors = lightColorScheme(
-    primary = AppColors.primary,
-    secondary = AppColors.secondary,
-    tertiary = AppColors.tertiary,
-    background = AppColors.lightBackground,
-    surface = AppColors.lightSurface,
-    surfaceVariant = AppColors.lightSurfaceVariant,
-    surfaceTint = AppColors.primary,
+    primary = AppColors.lightPrimary,
+    onPrimary = AppColors.lightOnPrimary,
     primaryContainer = AppColors.lightPrimaryContainer,
     onPrimaryContainer = AppColors.lightOnPrimaryContainer,
+    secondary = AppColors.lightSecondary,
+    onSecondary = AppColors.lightOnSecondary,
     secondaryContainer = AppColors.lightSecondaryContainer,
     onSecondaryContainer = AppColors.lightOnSecondaryContainer,
-    error = AppColors.error,
-    onPrimary = AppColors.onPrimary,
-    onTertiary = AppColors.onTertiary,
+    tertiary = AppColors.lightTertiary,
+    onTertiary = AppColors.lightOnTertiary,
+    tertiaryContainer = AppColors.lightTertiaryContainer,
+    onTertiaryContainer = AppColors.lightOnTertiaryContainer,
+    background = AppColors.lightBackground,
     onBackground = AppColors.lightOnBackground,
+    surface = AppColors.lightSurface,
     onSurface = AppColors.lightOnSurface,
+    surfaceVariant = AppColors.lightSurfaceVariant,
     onSurfaceVariant = AppColors.lightOnSurfaceVariant,
     outline = AppColors.lightOutline,
+    error = AppColors.lightError,
+    onError = AppColors.lightOnError,
+    surfaceTint = AppColors.lightPrimary,
 )

@@ -33,9 +33,9 @@ import com.appmuse.app.ui.theme.AppSpacing
 // multi-locale builds rewrite them to per-locale resource reads. Default
 // parameter expressions of @Composable functions evaluate in composable
 // scope, so both forms are legal there.
-private const val CHROME_SOMETHING_WENT_WRONG = "Something went wrong"
-private const val CHROME_TRY_AGAIN = "Try again"
-private const val CHROME_NOTHING_HERE_YET = "Nothing here yet"
+private const val CHROME_SOMETHING_WENT_WRONG = "Terjadi kesalahan"
+private const val CHROME_TRY_AGAIN = "Coba lagi"
+private const val CHROME_NOTHING_HERE_YET = "Belum ada data"
 
 /**
  * Reusable Loading / Error / Empty states — every feature screen should cover all

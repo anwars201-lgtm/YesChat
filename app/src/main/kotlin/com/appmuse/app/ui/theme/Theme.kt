@@ -14,12 +14,13 @@ import androidx.compose.ui.unit.dp
 /** Rounded shape scale — applied app-wide so cards, buttons, text fields, and
  *  dialogs share one corner radius. Tune the radii here to shift the whole app
  *  between sharp/soft; never hardcode RoundedCornerShape in screens. */
+// DESIGN ENGINE V2 GENERATED — global shape language (playful).
 val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(14.dp),
-    large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(28.dp),
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(18.dp),
+    medium = RoundedCornerShape(24.dp),
+    large = RoundedCornerShape(32.dp),
+    extraLarge = RoundedCornerShape(40.dp),
 )
 
 /** App theme — wraps content in Material3 with the app palette + type scale +

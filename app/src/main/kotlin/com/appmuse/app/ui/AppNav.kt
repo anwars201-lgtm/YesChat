@@ -2,7 +2,6 @@ package com.appmuse.app.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -24,8 +23,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.appmuse.app.model.User
-import com.appmuse.app.ui.screens.HomeScreen
+import com.appmuse.app.ui.design.DesignProfileTokens
 import com.appmuse.app.ui.screens.ProfileScreen
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.appmuse.app.R
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Settings
+import com.appmuse.app.ui.screens.ConversationsScreen
+import com.appmuse.app.ui.screens.ChatScreen
+import com.appmuse.app.ui.screens.ProviderSettingsScreen
 
 /**
  * Top-level navigation for the authenticated app — a Compose-Navigation NavHost
@@ -41,24 +48,26 @@ import com.appmuse.app.ui.screens.ProfileScreen
  * that, and the nav indicator/selection read the palette container roles — so the
  * whole chrome follows the user's chosen colors automatically.
  */
-private enum class Dest(val route: String, val label: String, val icon: ImageVector) {
-    Home("home", "Home", Icons.Filled.Home),
-    Profile("profile", "Profile", Icons.Filled.Person),
-    // AI: Add more destinations here
+private enum class Dest(val route: String, val label: String, val icon: ImageVector, @StringRes val titleRes: Int? = null, @StringRes val labelRes: Int? = null) {
+    Profile("profile", "Profil", Icons.Filled.Person),
+    Conversations("conversations", "Percakapan", Icons.AutoMirrored.Filled.Chat, R.string.appmuse_feature_conversations_title, R.string.appmuse_feature_conversations_nav),
+    Chat("chat", "Chat", Icons.AutoMirrored.Filled.Chat, R.string.appmuse_feature_chat_title, R.string.appmuse_feature_chat_nav),
+    ProviderSettings("provider_settings", "Pengaturan", Icons.Filled.Settings, R.string.appmuse_feature_provider_settings_title, R.string.appmuse_feature_provider_settings_nav),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNav(user: User, onLogout: () -> Unit) {
     val nav = rememberNavController()
+    val tabDestinations = listOf(Dest.Conversations, Dest.Profile)
     val backStackEntry by nav.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route ?: Dest.Home.route
-    val current = Dest.values().firstOrNull { it.route == currentRoute } ?: Dest.Home
+    val currentRoute = backStackEntry?.destination?.route ?: Dest.Conversations.route
+    val current = Dest.values().firstOrNull { it.route == currentRoute } ?: Dest.Conversations
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(current.label) },
+                title = { Text(current.titleRes?.let { stringResource(it) } ?: current.label) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     scrolledContainerColor = MaterialTheme.colorScheme.surface,
@@ -67,8 +76,11 @@ fun AppNav(user: User, onLogout: () -> Unit) {
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                Dest.values().forEach { dest ->
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = DesignProfileTokens.navigationElevation,
+            ) {
+                tabDestinations.forEach { dest ->
                     NavigationBarItem(
                         selected = current == dest,
                         colors = NavigationBarItemDefaults.colors(
@@ -89,8 +101,9 @@ fun AppNav(user: User, onLogout: () -> Unit) {
                                 }
                             }
                         },
-                        icon = { Icon(dest.icon, contentDescription = dest.label) },
-                        label = { Text(dest.label) },
+                        icon = { Icon(dest.icon, contentDescription = dest.labelRes?.let { stringResource(it) } ?: dest.label) },
+                        label = { Text(dest.labelRes?.let { stringResource(it) } ?: dest.label) },
+                        alwaysShowLabel = DesignProfileTokens.alwaysShowNavigationLabels,
                     )
                 }
             }
@@ -98,12 +111,21 @@ fun AppNav(user: User, onLogout: () -> Unit) {
     ) { innerPadding ->
         NavHost(
             navController = nav,
-            startDestination = Dest.Home.route,
+            startDestination = Dest.Conversations.route,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(Dest.Home.route) { HomeScreen(user) }
             composable(Dest.Profile.route) { ProfileScreen(user, onLogout) }
-            // AI: Add more feature routes here
+            composable(Dest.Conversations.route) {
+                ConversationsScreen(onOpenConversation = { _ ->
+                    nav.navigate(Dest.Chat.route) { launchSingleTop = true }
+                })
+            }
+            composable(Dest.Chat.route) {
+                ChatScreen(onOpenSettings = {
+                    nav.navigate(Dest.ProviderSettings.route) { launchSingleTop = true }
+                })
+            }
+            composable(Dest.ProviderSettings.route) { ProviderSettingsScreen() }
         }
     }
 }

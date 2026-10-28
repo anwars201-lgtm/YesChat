@@ -2,6 +2,8 @@ package com.appmuse.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,15 +12,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.appmuse.app.R
 import com.appmuse.app.config.AppConfig
 import com.appmuse.app.model.User
 import com.appmuse.app.ui.components.AppCard
@@ -26,9 +32,9 @@ import com.appmuse.app.ui.theme.AppSpacing
 
 // Phrase-book chrome. Single-language builds translate these in place;
 // multi-locale builds rewrite them to per-locale resource reads.
-private const val CHROME_ACCOUNT = "Account"
-private const val CHROME_MANAGE_PROFILE = "Manage your profile and preferences here."
-private const val CHROME_LOG_OUT = "Log out"
+private const val CHROME_ACCOUNT = "Profil"
+private const val CHROME_MANAGE_PROFILE = "Kelola profil dan preferensi Anda di sini."
+private const val CHROME_LOG_OUT = "Keluar"
 
 /**
  * Profile — shows the signed-in user and the logout action. [onLogout] is hoisted
@@ -48,22 +54,27 @@ fun ProfileScreen(user: User, onLogout: () -> Unit, modifier: Modifier = Modifie
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(AppSpacing.base))
-        // Avatar — the user's initial in a soft brand-tinted circle (swap for an
-        // image once user.avatar is wired). primaryContainer keeps it on-palette
-        // without the heavy solid-primary block.
         Box(
-            modifier = Modifier.size(96.dp).background(cs.primaryContainer, CircleShape),
+            modifier = Modifier.size(AppSpacing.xxl * 2).background(cs.secondaryContainer, MaterialTheme.shapes.extraLarge),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                initialOf(user),
-                style = MaterialTheme.typography.displaySmall,
-                color = cs.onPrimaryContainer,
-            )
+            if (AppConfig.authEnabled) {
+                Text(initialOf(user), style = MaterialTheme.typography.displaySmall, color = cs.onSecondaryContainer)
+            } else {
+                Icon(
+                    Icons.AutoMirrored.Filled.Chat,
+                    contentDescription = null,
+                    modifier = Modifier.size(AppSpacing.xxl),
+                    tint = cs.onSecondaryContainer,
+                )
+            }
         }
         Spacer(Modifier.height(AppSpacing.base))
-        Text(user.name ?: CHROME_ACCOUNT, style = MaterialTheme.typography.headlineSmall)
-        if (user.email.isNotEmpty()) {
+        Text(
+            if (AppConfig.authEnabled) user.name ?: CHROME_ACCOUNT else stringResource(R.string.appmuse_app_name),
+            style = MaterialTheme.typography.headlineSmall,
+        )
+        if (AppConfig.authEnabled && user.email.isNotEmpty()) {
             Spacer(Modifier.height(AppSpacing.xs))
             Text(
                 user.email,
@@ -74,12 +85,22 @@ fun ProfileScreen(user: User, onLogout: () -> Unit, modifier: Modifier = Modifie
 
         Spacer(Modifier.height(AppSpacing.xl))
         AppCard {
-            Text(CHROME_ACCOUNT, style = MaterialTheme.typography.titleLarge)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+            ) {
+                Icon(Icons.Outlined.Lock, contentDescription = null, tint = cs.onPrimaryContainer)
+                Text(
+                    if (AppConfig.authEnabled) CHROME_ACCOUNT else stringResource(R.string.appmuse_settings_api_key),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = cs.onPrimaryContainer,
+                )
+            }
             Spacer(Modifier.height(AppSpacing.sm))
             Text(
-                CHROME_MANAGE_PROFILE,
+                if (AppConfig.authEnabled) CHROME_MANAGE_PROFILE else stringResource(R.string.appmuse_privacy_api_key),
                 style = MaterialTheme.typography.bodyMedium,
-                color = cs.onSurfaceVariant,
+                color = cs.onPrimaryContainer,
             )
             if (AppConfig.authEnabled) {
                 Spacer(Modifier.height(AppSpacing.lg))
@@ -87,6 +108,14 @@ fun ProfileScreen(user: User, onLogout: () -> Unit, modifier: Modifier = Modifie
                     Text(CHROME_LOG_OUT)
                 }
             }
+        }
+        if (!AppConfig.authEnabled) {
+            Spacer(Modifier.height(AppSpacing.lg))
+            Text(
+                stringResource(R.string.appmuse_privacy_local_only),
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.onSurfaceVariant,
+            )
         }
     }
 }
