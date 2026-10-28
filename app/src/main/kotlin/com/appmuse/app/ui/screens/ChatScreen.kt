@@ -38,7 +38,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -53,7 +52,6 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.StopCircle
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -94,7 +92,6 @@ import java.util.Locale
 
 @Composable
 fun ChatScreen(
-    onOpenSettings: () -> Unit,
     vm: ChatViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -103,7 +100,6 @@ fun ChatScreen(
     val streaming by vm.streaming.collectAsStateWithLifecycle()
     val actionError by vm.actionError.collectAsStateWithLifecycle()
     val notice by vm.notice.collectAsStateWithLifecycle()
-    var showProfiles by rememberSaveable { mutableStateOf(false) }
     var showModels by rememberSaveable { mutableStateOf(false) }
     var showReasoning by rememberSaveable { mutableStateOf(false) }
     val attachments by vm.attachments.collectAsStateWithLifecycle()
@@ -123,7 +119,7 @@ fun ChatScreen(
         }
     }
 
-    Column(Modifier.fillMaxSize().imePadding()) {
+    Column(Modifier.fillMaxSize()) {
         when (val current = state) {
             ChatUiState.Loading -> Box(Modifier.weight(1f)) { SkeletonList() }
             is ChatUiState.Error -> Column(Modifier.weight(1f)) {
@@ -135,27 +131,6 @@ fun ChatScreen(
                 TextButton(onClick = vm::load, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Coba lagi") }
             }
             is ChatUiState.Success -> {
-                Row(
-                    Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primaryContainer).padding(AppSpacing.md),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            current.conversation?.title ?: stringResource(R.string.appmuse_feature_chat_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        Text(
-                            current.selectedProfile?.let { "${it.name} · ${it.model}" } ?: "Pilih profil penyedia",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                    TextButton(onClick = { showProfiles = true }, enabled = !busy) {
-                        Text(stringResource(R.string.appmuse_action_chat_switch_profile))
-                    }
-                }
                 val messages = current.conversation?.messages.orEmpty()
                 if (messages.isEmpty()) {
                     EmptyState(
@@ -218,37 +193,6 @@ fun ChatScreen(
                     onSelect = { vm.setModel(it); showModels = false },
                     onDismiss = { showModels = false },
                 )
-                if (showProfiles) {
-                    AlertDialog(
-                        onDismissRequest = { showProfiles = false },
-                        title = { Text(stringResource(R.string.appmuse_action_chat_switch_profile)) },
-                        text = {
-                            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
-                                Text(stringResource(R.string.appmuse_chat_profile_context_help), style = MaterialTheme.typography.bodySmall)
-                                if (current.profiles.isEmpty()) Text(stringResource(R.string.appmuse_profiles_empty_body))
-                                LazyColumn {
-                                    items(current.profiles.size, key = { current.profiles[it].id }) { index ->
-                                        val profile = current.profiles[index]
-                                        TextButton(
-                                            onClick = { vm.switchProfile(profile.id); showProfiles = false },
-                                            enabled = !busy,
-                                            modifier = Modifier.fillMaxWidth(),
-                                        ) {
-                                            Text(
-                                                (if (profile.id == current.selectedProfile?.id) "✓ " else "") + "${profile.name} · ${profile.model}",
-                                                modifier = Modifier.fillMaxWidth(),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(onClick = { showProfiles = false; onOpenSettings() }, enabled = !busy) { Text("Kelola profil") }
-                        },
-                        dismissButton = { TextButton(onClick = { showProfiles = false }) { Text("Tutup") } },
-                    )
-                }
             }
         }
         SnackbarHost(snackbar)

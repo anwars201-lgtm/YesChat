@@ -147,11 +147,8 @@ fun AppNav(user: User, onLogout: () -> Unit) {
                         onClick = {
                             if (current != dest) {
                                 nav.navigate(dest.route) {
-                                    // Single-top + state restore is the standard
-                                    // bottom-nav pattern (no back-stack pile-up).
-                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                    popUpTo(nav.graph.findStartDestination().id) { inclusive = false }
                                     launchSingleTop = true
-                                    restoreState = true
                                 }
                             }
                         },
@@ -175,9 +172,7 @@ fun AppNav(user: User, onLogout: () -> Unit) {
                 })
             }
             composable(Dest.Chat.route) {
-                ChatScreen(vm = chatVm, onOpenSettings = {
-                    nav.navigate(Dest.Profile.route) { launchSingleTop = true }
-                })
+                ChatScreen(vm = chatVm)
             }
             composable(Dest.ProviderSettings.route) { ProviderSettingsScreen() }
         }
