@@ -256,7 +256,7 @@ private fun BubbleList(
                             bottomEnd = if (outgoing) CornerSize(AppSpacing.xs) else MaterialTheme.shapes.large.bottomEnd,
                         ),
                         colors = CardDefaults.elevatedCardColors(
-                            containerColor = if (outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            containerColor = if (outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                             contentColor = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                         ),
                     ) {
