@@ -28,9 +28,9 @@ object AppColors {
     val lightError = Color(0xFFBA1A1A)
     val lightOnError = Color(0xFFFFFFFF)
 
-    val darkPrimary = Color(0xFFC0C1FF)
-    val darkOnPrimary = Color(0xFF1000A9)
-    val darkPrimaryContainer = Color(0xFF2F2EBE)
+    val darkPrimary = Color(0xFF7A78FF)
+    val darkOnPrimary = Color(0xFFFFFFFF)
+    val darkPrimaryContainer = Color(0xFF3533B8)
     val darkOnPrimaryContainer = Color(0xFFE1E0FF)
     val darkSecondary = Color(0xFFD0BCFF)
     val darkOnSecondary = Color(0xFF3C0091)
@@ -40,12 +40,12 @@ object AppColors {
     val darkOnTertiary = Color(0xFF46263A)
     val darkTertiaryContainer = Color(0xFF5F3C51)
     val darkOnTertiaryContainer = Color(0xFFFFD8EC)
-    val darkBackground = Color(0xFF131316)
+    val darkBackground = Color(0xFF0B0D10)
     val darkOnBackground = Color(0xFFE5E1E6)
-    val darkSurface = Color(0xFF1E1D21)
+    val darkSurface = Color(0xFF171B21)
     val darkOnSurface = Color(0xFFE5E1E6)
-    val darkSurfaceVariant = Color(0xFF393841)
-    val darkOnSurfaceVariant = Color(0xFFC8C5D0)
+    val darkSurfaceVariant = Color(0xFF242B34)
+    val darkOnSurfaceVariant = Color(0xFFC9CDD6)
     val darkOutline = Color(0xFF918F9A)
     val darkError = Color(0xFFFFB4AB)
     val darkOnError = Color(0xFF690005)
@@ -90,7 +90,7 @@ val DarkColors = darkColorScheme(
     outline = AppColors.darkOutline,
     error = AppColors.darkError,
     onError = AppColors.darkOnError,
-    surfaceTint = AppColors.darkPrimary,
+    surfaceTint = AppColors.darkSurface,
 )
 
 val LightColors = lightColorScheme(
