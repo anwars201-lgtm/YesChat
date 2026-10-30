@@ -72,6 +72,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -215,6 +216,20 @@ private fun BubbleList(
     LaunchedEffect(messages.size, messages.lastOrNull()?.content, messages.lastOrNull()?.status) {
         if (messages.isNotEmpty() && (nearBottom || messages.last().status == "streaming" && messages.last().content.isEmpty())) {
             listState.scrollToItem(messages.lastIndex)
+        }
+    }
+    // Keep the conversation glued to the bottom when the viewport shrinks or grows
+    // (the keyboard opening/closing resizes the window): remember whether the user
+    // had the list at the bottom - updated only while THEY scroll - and re-anchor
+    // to the end of the last message on every viewport height change.
+    var stickToBottom by remember { mutableStateOf(true) }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress to listState.canScrollForward }
+            .collect { (scrolling, canForward) -> if (scrolling) stickToBottom = !canForward }
+    }
+    LaunchedEffect(listState.layoutInfo.viewportSize.height, messages.size) {
+        if (messages.isNotEmpty() && stickToBottom) {
+            listState.scrollToItem(messages.lastIndex, Int.MAX_VALUE)
         }
     }
     BoxWithConstraints(modifier) {
