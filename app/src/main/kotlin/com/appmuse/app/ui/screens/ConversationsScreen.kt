@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
@@ -40,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -108,7 +110,7 @@ fun ConversationsScreen(
                     )
                     Text(
                         stringResource(R.string.appmuse_feature_conversations_title),
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineMedium,
                     )
                     Text(
                         stringResource(R.string.appmuse_feature_conversations_nav) + " disimpan di perangkat ini",
@@ -125,6 +127,7 @@ fun ConversationsScreen(
             onClick = { vm.create(createLabel) },
             enabled = canCreate,
             modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
         ) {
             Icon(Icons.Filled.Add, contentDescription = null)
             Text(createLabel, Modifier.padding(start = AppSpacing.sm))
@@ -244,10 +247,14 @@ private fun ConversationRow(
     ProfileSurface(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(AppSpacing.xxl).background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+                Modifier.size(AppSpacing.xxl).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.AutoMirrored.Filled.Chat, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(
+                    conversation.title.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             }
             Column(Modifier.weight(1f).padding(start = AppSpacing.md)) {
                 Text(conversation.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
