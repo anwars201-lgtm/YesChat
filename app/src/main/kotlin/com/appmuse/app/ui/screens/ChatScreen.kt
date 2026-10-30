@@ -12,7 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.appmuse.app.ui.components.ChatComposer
 import com.appmuse.app.ui.components.ProviderModelSheet
-import com.appmuse.app.ui.components.ReasoningDialog
+import com.appmuse.app.ui.components.ReasoningSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -183,7 +183,7 @@ fun ChatScreen(
                     onAttach = { filePicker.launch(arrayOf("image/png", "image/jpeg", "image/gif", "image/webp", "text/plain", "text/markdown", "text/csv", "application/json")) },
                     onRemoveAttachment = vm::removeAttachment,
                 )
-                if (showReasoning && current.selectedProfile != null) ReasoningDialog(
+                if (showReasoning && current.selectedProfile != null) ReasoningSheet(
                     selected = current.selectedProfile.reasoningEffort,
                     onSelect = { vm.setReasoning(it); showReasoning = false },
                     onDismiss = { showReasoning = false },
