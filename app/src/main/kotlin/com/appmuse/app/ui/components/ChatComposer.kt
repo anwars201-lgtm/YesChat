@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.res.stringResource
 import com.appmuse.app.R
 import androidx.compose.material.icons.Icons
@@ -24,12 +23,14 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import com.appmuse.app.model.ChatAttachment
 import com.appmuse.app.ui.theme.AppSpacing
@@ -59,9 +60,9 @@ fun ChatComposer(
     onRemoveAttachment: (String) -> Unit,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = AppSpacing.sm, vertical = AppSpacing.xs),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = AppSpacing.base, vertical = AppSpacing.sm),
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = AppSpacing.xs,
     ) {
         Column(Modifier.padding(AppSpacing.md), verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
@@ -80,30 +81,32 @@ fun ChatComposer(
                     }
                 }
             }
-            OutlinedTextField(
+            TextField(
                 value = draft,
                 onValueChange = onDraftChange,
                 placeholder = { Text("Tulis pesan…") },
-                label = { Text("Pesan") },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 5,
                 shape = MaterialTheme.shapes.large,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                ),
             )
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
                 IconButton(onClick = onAttach, enabled = !busy, modifier = Modifier.size(AppSpacing.xxl)) {
                     Icon(Icons.Outlined.AttachFile, contentDescription = "Lampirkan berkas", tint = MaterialTheme.colorScheme.primary)
                 }
-                IconButton(
+                AssistChip(
                     onClick = onReasoning,
                     enabled = !busy && model != null,
-                    modifier = Modifier.size(AppSpacing.xxl),
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    ),
-                ) {
-                    Icon(Icons.Outlined.Psychology, contentDescription = "Tingkat penalaran: ${reasoningLabel(reasoning)}")
-                }
+                    modifier = Modifier.heightIn(min = AppSpacing.xxl),
+                    label = { Text(reasoningLabel(reasoning), maxLines = 1, style = MaterialTheme.typography.labelMedium) },
+                    leadingIcon = { Icon(Icons.Outlined.Psychology, contentDescription = "Tingkat penalaran") },
+                )
                 AssistChip(
                     onClick = onModel,
                     enabled = !busy && model != null,
