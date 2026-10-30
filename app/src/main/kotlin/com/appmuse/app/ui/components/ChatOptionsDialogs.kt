@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -28,23 +27,27 @@ import com.appmuse.app.model.ProviderProfile
 import com.appmuse.app.ui.ChatModelsUiState
 import com.appmuse.app.ui.theme.AppSpacing
 
+/** Reasoning picker for the chat screen, rising from the composer's reasoning
+ *  pill. Applies to this conversation only (a per-conversation override of the
+ *  active behaviour's reasoning effort). */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReasoningDialog(selected: String, onSelect: (String) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.appmuse_settings_reasoning_effort)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
-                Text("Berlaku untuk percakapan ini. Default tidak mengirim parameter reasoning_effort.", style = MaterialTheme.typography.bodySmall)
-                listOf("default", "low", "medium", "high").forEach { value ->
-                    TextButton(onClick = { onSelect(value) }, modifier = Modifier.fillMaxWidth().heightIn(min = AppSpacing.xxl)) {
-                        Text((if (value == selected) "✓ " else "") + reasoningLabel(value))
-                    }
+fun ReasoningSheet(selected: String, onSelect: (String) -> Unit, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState()
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = AppSpacing.base, vertical = AppSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+        ) {
+            Text(stringResource(R.string.appmuse_settings_reasoning_effort), style = MaterialTheme.typography.titleLarge)
+            Text("Berlaku untuk percakapan ini. Default tidak mengirim parameter reasoning_effort.", style = MaterialTheme.typography.bodySmall)
+            listOf("default", "low", "medium", "high").forEach { value ->
+                TextButton(onClick = { onSelect(value) }, modifier = Modifier.fillMaxWidth().heightIn(min = AppSpacing.xxl)) {
+                    Text((if (value == selected) "✓ " else "") + reasoningLabel(value))
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Tutup") } },
-    )
+        }
+    }
 }
 
 /** Provider + model picker for the chat screen, rising from the composer pill.
