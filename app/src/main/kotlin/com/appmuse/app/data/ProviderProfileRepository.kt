@@ -4,8 +4,11 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
+import com.appmuse.app.model.BehaviorProfile
+import com.appmuse.app.model.LegacyProviderArchive
 import com.appmuse.app.model.ProviderArchive
-import com.appmuse.app.model.ProviderProfile
+import com.appmuse.app.model.ProviderConfig
+import com.appmuse.app.model.migrated
 import java.io.File
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -20,47 +23,80 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
-/** Provider credentials never enter ApiClient, analytics, backups, or the app backend. */
+/** Provider credentials never enter ApiClient, analytics, backups, or the app backend.
+ *  The archive is split in two layers: providers (connection + model) and behaviours
+ *  (reasoning + system prompt), selectable independently. Files written by the
+ *  pre-split single-profile format are migrated 1:1 on first read. */
 class ProviderProfileRepository private constructor(context: Context) {
     private val file = AtomicFile(File(context.noBackupFilesDir, "yeschat-profiles.enc"))
     private val mutex = Mutex()
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val _archive = MutableStateFlow<ProviderArchive?>(null)
     val archive = _archive.asStateFlow()
+    private var rewriteAfterMigration = false
 
     suspend fun load(): ProviderArchive = withContext(Dispatchers.IO) {
-        mutex.withLock { read().also { _archive.value = it } }
+        mutex.withLock {
+            val loaded = read()
+            if (rewriteAfterMigration) {
+                write(loaded)
+                rewriteAfterMigration = false
+            }
+            _archive.value = loaded
+            loaded
+        }
     }
 
-    suspend fun save(profile: ProviderProfile) {
-        require(profile.name.isNotBlank()) { "Nama profil wajib diisi." }
-        require(profile.apiKey.isNotBlank()) { "API Key wajib diisi." }
-        require(profile.model.isNotBlank()) { "Model wajib diisi." }
-        require(profile.reasoningEffort in setOf("default", "low", "medium", "high")) {
-            "Tingkat penalaran tidak valid."
-        }
-        val url = profile.baseUrl.toHttpUrlOrNull()
+    suspend fun saveProvider(config: ProviderConfig) {
+        require(config.name.isNotBlank()) { "Nama penyedia wajib diisi." }
+        require(config.apiKey.isNotBlank()) { "API Key wajib diisi." }
+        require(config.model.isNotBlank()) { "Model wajib diisi." }
+        val url = config.baseUrl.toHttpUrlOrNull()
         require(url != null && url.isHttps && url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) {
             "Gunakan Base URL HTTPS yang valid tanpa kredensial, kueri, atau fragmen."
         }
         update { current ->
             current.copy(
-                profiles = current.profiles.filterNot { it.id == profile.id } + profile,
-                selectedProfileId = current.selectedProfileId ?: profile.id,
+                providers = current.providers.filterNot { it.id == config.id } + config,
+                selectedProviderId = current.selectedProviderId ?: config.id,
             )
         }
     }
 
-    suspend fun select(id: String) = update { current ->
-        require(current.profiles.any { it.id == id }) { "Profil penyedia tidak ditemukan." }
-        current.copy(selectedProfileId = id)
+    suspend fun saveBehavior(behavior: BehaviorProfile) {
+        require(behavior.name.isNotBlank()) { "Nama perilaku wajib diisi." }
+        require(behavior.reasoningEffort in setOf("default", "low", "medium", "high")) {
+            "Tingkat penalaran tidak valid."
+        }
+        update { current ->
+            current.copy(
+                behaviors = current.behaviors.filterNot { it.id == behavior.id } + behavior,
+                selectedBehaviorId = current.selectedBehaviorId ?: behavior.id,
+            )
+        }
     }
 
-    suspend fun delete(id: String) = update { current ->
-        val remaining = current.profiles.filterNot { it.id == id }
-        current.copy(profiles = remaining, selectedProfileId = current.selectedProfileId.takeUnless { it == id } ?: remaining.firstOrNull()?.id)
+    suspend fun selectProvider(id: String) = update { current ->
+        require(current.providers.any { it.id == id }) { "Penyedia tidak ditemukan." }
+        current.copy(selectedProviderId = id)
+    }
+
+    suspend fun selectBehavior(id: String) = update { current ->
+        require(current.behaviors.any { it.id == id }) { "Perilaku tidak ditemukan." }
+        current.copy(selectedBehaviorId = id)
+    }
+
+    suspend fun deleteProvider(id: String) = update { current ->
+        val remaining = current.providers.filterNot { it.id == id }
+        current.copy(providers = remaining, selectedProviderId = current.selectedProviderId.takeUnless { it == id } ?: remaining.firstOrNull()?.id)
+    }
+
+    suspend fun deleteBehavior(id: String) = update { current ->
+        val remaining = current.behaviors.filterNot { it.id == id }
+        current.copy(behaviors = remaining, selectedBehaviorId = current.selectedBehaviorId.takeUnless { it == id } ?: remaining.firstOrNull()?.id)
     }
 
     private fun key(): SecretKey {
@@ -83,18 +119,28 @@ class ProviderProfileRepository private constructor(context: Context) {
         require(bytes.size > 12) { "Penyimpanan profil tidak dapat dibaca." }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
-        return json.decodeFromString<ProviderArchive>(cipher.doFinal(bytes.copyOfRange(12, bytes.size)).toString(Charsets.UTF_8))
+        val text = cipher.doFinal(bytes.copyOfRange(12, bytes.size)).toString(Charsets.UTF_8)
+        val element = json.parseToJsonElement(text)
+        if (element is JsonObject && "profiles" in element) {
+            rewriteAfterMigration = true
+            return json.decodeFromString<LegacyProviderArchive>(text).migrated()
+        }
+        return json.decodeFromString<ProviderArchive>(text)
+    }
+
+    private fun write(next: ProviderArchive) {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key())
+        val bytes = cipher.iv + cipher.doFinal(json.encodeToString(next).toByteArray(Charsets.UTF_8))
+        val stream = file.startWrite()
+        try { stream.write(bytes); file.finishWrite(stream) }
+        catch (error: Exception) { file.failWrite(stream); throw error }
     }
 
     private suspend fun update(transform: (ProviderArchive) -> ProviderArchive) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val next = transform(read())
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.ENCRYPT_MODE, key())
-            val bytes = cipher.iv + cipher.doFinal(json.encodeToString(next).toByteArray(Charsets.UTF_8))
-            val stream = file.startWrite()
-            try { stream.write(bytes); file.finishWrite(stream) }
-            catch (error: Exception) { file.failWrite(stream); throw error }
+            write(next)
             _archive.value = next
         }
     }
