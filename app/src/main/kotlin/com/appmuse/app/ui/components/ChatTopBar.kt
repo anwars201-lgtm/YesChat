@@ -66,7 +66,7 @@ fun ChatTopBar(
                     Icon(Icons.Outlined.Toll, contentDescription = null)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("$total token", style = MaterialTheme.typography.titleSmall)
-                        Text(if (streaming) "Menerima balasan…" else "Permintaan terakhir", style = MaterialTheme.typography.labelSmall)
+                        Text(if (streaming) "Menerima balasan…" else "Total percakapan", style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -94,7 +94,7 @@ fun ChatTopBar(
         title = { Text("Penggunaan token") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.md)) {
-                Text("Permintaan terakhir dalam percakapan ini", style = MaterialTheme.typography.titleSmall)
+                Text("Total dalam percakapan ini", style = MaterialTheme.typography.titleSmall)
                 Text("Masukan: ${count(usage?.promptTokens)}")
                 Text("Keluaran: ${count(usage?.completionTokens)}")
                 Text("Total: $total", style = MaterialTheme.typography.titleMedium)
