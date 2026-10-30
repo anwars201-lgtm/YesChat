@@ -125,11 +125,6 @@ fun ChatComposer(
                     )
                 }
             }
-            Text(
-                if (busy && !streaming) "Memproses…" else "Penalaran: ${reasoningLabel(reasoning)} · Tersimpan di perangkat",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
