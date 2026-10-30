@@ -182,13 +182,13 @@ private fun ProviderProfileRow(
 ) {
     ElevatedCard(
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(AppSpacing.md), verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
-                Box(Modifier.size(AppSpacing.xxl).background(MaterialTheme.colorScheme.primaryContainer, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(if (active) Icons.Outlined.CheckCircle else Icons.Outlined.Dns, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                Box(Modifier.size(AppSpacing.xxl).background(if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant, CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(if (active) Icons.Outlined.CheckCircle else Icons.Outlined.Dns, null, tint = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary)
                 }
                 Column(Modifier.weight(1f)) {
                     Text(profile.name, style = MaterialTheme.typography.titleMedium)
