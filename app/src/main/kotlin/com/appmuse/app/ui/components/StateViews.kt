@@ -125,15 +125,15 @@ private fun StateScaffold(
         verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            modifier = Modifier.size(64.dp).background(tint.copy(alpha = 0.12f), CircleShape),
+            modifier = Modifier.size(72.dp).background(tint.copy(alpha = 0.12f), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(32.dp))
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(36.dp))
         }
         Spacer(Modifier.height(AppSpacing.base))
         Text(
             title,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
