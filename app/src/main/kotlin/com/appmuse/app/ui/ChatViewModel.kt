@@ -242,7 +242,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 profiles.selectProvider(id)
                 current.conversation?.let { c -> conversations.updateConversation(c.id) { it.copy(profileId = id, modelOverride = null, reasoningOverride = null) } }
-                _notice.value = "Profil diganti. Permintaan berikutnya memakai riwayat lengkap dan instruksi sistem profil ini."
+                _notice.value = "Penyedia diganti. Permintaan berikutnya memakai riwayat lengkap percakapan ini lewat penyedia baru."
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 _actionError.value = "Profil tidak dapat disimpan. Periksa penyimpanan perangkat dan coba lagi."
