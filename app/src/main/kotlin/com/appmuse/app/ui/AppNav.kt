@@ -21,6 +21,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.appmuse.app.model.ConversationMessage
+import com.appmuse.app.model.TokenUsage
 import kotlinx.coroutines.launch
 import com.appmuse.app.ui.components.ChatTopBar
 import com.appmuse.app.ui.theme.AppSpacing
@@ -117,9 +119,9 @@ fun AppNav() {
     Scaffold(
         topBar = {
             if (current == Dest.Chat) {
-                val latestAssistant = (chatState as? ChatUiState.Success)?.conversation?.messages?.lastOrNull { it.role == "assistant" }
+                val chatMessages = (chatState as? ChatUiState.Success)?.conversation?.messages.orEmpty()
                 ChatTopBar(
-                    usage = latestAssistant?.usage,
+                    usage = totalUsage(chatMessages),
                     streaming = streaming,
                     onOpenSidebar = { scope.launch { drawer.open() } },
                     onOpenSettings = { nav.navigate(Dest.Profile.route) { launchSingleTop = true } },
@@ -207,4 +209,21 @@ fun AppNav() {
         }
     }
     }
+}
+
+/** Sums the provider-reported usage of every message in the conversation.
+ *  Returns null when no message carries usage yet, so the pill shows a dash. */
+private fun totalUsage(messages: List<ConversationMessage>): TokenUsage? {
+    var prompt = 0L
+    var completion = 0L
+    var total = 0L
+    var any = false
+    messages.forEach { message ->
+        val usage = message.usage ?: return@forEach
+        any = true
+        prompt += usage.promptTokens ?: 0
+        completion += usage.completionTokens ?: 0
+        total += usage.totalTokens ?: ((usage.promptTokens ?: 0) + (usage.completionTokens ?: 0))
+    }
+    return if (any) TokenUsage(prompt, completion, total) else null
 }
