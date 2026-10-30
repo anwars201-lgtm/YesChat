@@ -11,7 +11,9 @@ import com.appmuse.app.data.ProviderChatRepository
 import com.appmuse.app.data.ProviderProfileRepository
 import com.appmuse.app.model.ConversationMessage
 import com.appmuse.app.model.LocalConversation
+import com.appmuse.app.model.ProviderArchive
 import com.appmuse.app.model.ProviderProfile
+import com.appmuse.app.model.resolvedWith
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -90,8 +92,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             if (archiveState == null || profileState == null) ChatUiState.Loading
                             else {
                                 val selected = archiveState.conversations.firstOrNull { it.id == archiveState.selectedConversationId }
-                                val profileId = selected?.profileId ?: profileState.selectedProfileId
-                                ChatUiState.Success(selected, profileState.profiles, effectiveProfile(selected, profileState.profiles.firstOrNull { it.id == profileId }))
+                                val resolved = resolveProfiles(profileState)
+                                val profileId = selected?.profileId ?: profileState.selectedProviderId
+                                ChatUiState.Success(selected, resolved, effectiveProfile(selected, resolved.firstOrNull { it.id == profileId }))
                             }
                         }.collect { next ->
                             val previous = _state.value as? ChatUiState.Success
@@ -117,8 +120,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val archive = conversations.archive.value ?: return
         val settings = profiles.archive.value ?: return
         val selected = archive.conversations.firstOrNull { it.id == archive.selectedConversationId }
-        val profileId = selected?.profileId ?: settings.selectedProfileId
-        _state.value = ChatUiState.Success(selected, settings.profiles, effectiveProfile(selected, settings.profiles.firstOrNull { it.id == profileId }))
+        val resolved = resolveProfiles(settings)
+        val profileId = selected?.profileId ?: settings.selectedProviderId
+        _state.value = ChatUiState.Success(selected, resolved, effectiveProfile(selected, resolved.firstOrNull { it.id == profileId }))
+    }
+
+    /** Providers resolved against the selected behaviour (falling back to the
+     *  first behaviour, then to defaults) — the list the chat UI consumes. */
+    private fun resolveProfiles(archive: ProviderArchive): List<ProviderProfile> {
+        val behavior = archive.behaviors.firstOrNull { it.id == archive.selectedBehaviorId } ?: archive.behaviors.firstOrNull()
+        return archive.providers.map { it.resolvedWith(behavior) }
     }
 
     private fun effectiveProfile(conversation: LocalConversation?, profile: ProviderProfile?): ProviderProfile? = profile?.copy(
@@ -229,7 +240,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _actionError.value = null
         viewModelScope.launch {
             try {
-                profiles.select(id)
+                profiles.selectProvider(id)
                 current.conversation?.let { c -> conversations.updateConversation(c.id) { it.copy(profileId = id, modelOverride = null, reasoningOverride = null) } }
                 _notice.value = "Profil diganti. Permintaan berikutnya memakai riwayat lengkap dan instruksi sistem profil ini."
             } catch (error: Exception) {
@@ -255,7 +266,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val selectedAttachments = _attachments.value
         if (text.isBlank() && selectedAttachments.isEmpty()) return
         val profile = current.selectedProfile ?: run {
-            _actionError.value = "Pilih profil penyedia terlebih dahulu melalui Pengaturan."
+            _actionError.value = "Pilih penyedia terlebih dahulu melalui Pengaturan."
             return
         }
         _busy.value = true
