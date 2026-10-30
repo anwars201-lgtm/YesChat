@@ -156,7 +156,7 @@ fun ProviderSettingsScreen(vm: ProviderSettingsViewModel = viewModel()) {
                                 )
                             }
                         } else {
-                            items(s.archive.providers, key = { it.id }) { config ->
+                            items(s.archive.providers, key = { "provider:" + it.id }) { config ->
                                 ProviderRow(
                                     config = config,
                                     active = config.id == s.archive.selectedProviderId,
@@ -187,7 +187,7 @@ fun ProviderSettingsScreen(vm: ProviderSettingsViewModel = viewModel()) {
                                 )
                             }
                         } else {
-                            items(s.archive.behaviors, key = { it.id }) { behavior ->
+                            items(s.archive.behaviors, key = { "behavior:" + it.id }) { behavior ->
                                 BehaviorRow(
                                     behavior = behavior,
                                     active = behavior.id == s.archive.selectedBehaviorId,
