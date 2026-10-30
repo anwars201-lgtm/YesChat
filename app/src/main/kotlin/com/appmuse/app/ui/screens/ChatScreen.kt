@@ -11,7 +11,7 @@ import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.appmuse.app.ui.components.ChatComposer
-import com.appmuse.app.ui.components.ModelDialog
+import com.appmuse.app.ui.components.ProviderModelSheet
 import com.appmuse.app.ui.components.ReasoningDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -188,11 +188,19 @@ fun ChatScreen(
                     onSelect = { vm.setReasoning(it); showReasoning = false },
                     onDismiss = { showReasoning = false },
                 )
-                if (showModels && current.selectedProfile != null) ModelDialog(
-                    selected = current.selectedProfile.model,
-                    state = models,
-                    onRetry = vm::loadModels,
-                    onSelect = { vm.setModel(it); showModels = false },
+                if (showModels && current.selectedProfile != null) ProviderModelSheet(
+                    providers = current.profiles,
+                    selectedProviderId = current.selectedProfile.id,
+                    selectedModel = current.selectedProfile.model,
+                    modelsState = models,
+                    onSelectProvider = { id ->
+                        if (id != current.selectedProfile.id) {
+                            vm.switchProfile(id)
+                            vm.loadModels()
+                        }
+                    },
+                    onRetryModels = vm::loadModels,
+                    onSelectModel = { vm.setModel(it); showModels = false },
                     onDismiss = { showModels = false },
                 )
             }
