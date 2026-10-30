@@ -51,11 +51,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.StopCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -146,6 +148,8 @@ fun ChatScreen(
                     BubbleList(
                         messages = messages,
                         modifier = Modifier.weight(1f),
+                        canRegenerate = !busy && !streaming,
+                        onRegenerate = vm::regenerateLast,
                         onCopy = { content ->
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText(copyLabel, vm.copyContent(content)))
@@ -217,6 +221,8 @@ fun ChatScreen(
 private fun BubbleList(
     messages: List<ConversationMessage>,
     modifier: Modifier = Modifier,
+    canRegenerate: Boolean = false,
+    onRegenerate: () -> Unit = {},
     onCopy: (String) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -242,6 +248,7 @@ private fun BubbleList(
     }
     BoxWithConstraints(modifier) {
         val maxBubbleWidth = maxWidth * 0.75f
+        val lastAssistantIndex = messages.indexOfLast { it.role == "assistant" }
         LazyColumn(
             state = listState,
             contentPadding = PaddingValues(AppSpacing.base),
@@ -322,12 +329,27 @@ private fun BubbleList(
                                 },
                                 style = MaterialTheme.typography.labelSmall,
                             )
-                            if (message.content.isNotEmpty() && message.status != "streaming") {
-                                TextButton(onClick = { onCopy(message.content) }) {
-                                    val color = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-                                    Icon(Icons.Outlined.ContentCopy, contentDescription = null, tint = color)
-                                    Text(stringResource(R.string.appmuse_action_chat_copy), Modifier.padding(start = AppSpacing.sm), color = color)
-                                }
+                        }
+                    }
+                }
+                if (message.content.isNotEmpty() && message.status != "streaming") {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (outgoing) Arrangement.End else Arrangement.Start) {
+                        IconButton(onClick = { onCopy(message.content) }, modifier = Modifier.size(AppSpacing.xxl)) {
+                            Icon(
+                                Icons.Outlined.ContentCopy,
+                                contentDescription = "Salin pesan",
+                                modifier = Modifier.size(AppSpacing.lg),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (!outgoing && index == lastAssistantIndex && canRegenerate) {
+                            IconButton(onClick = onRegenerate, modifier = Modifier.size(AppSpacing.xxl)) {
+                                Icon(
+                                    Icons.Outlined.Refresh,
+                                    contentDescription = "Buat ulang jawaban",
+                                    modifier = Modifier.size(AppSpacing.lg),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
